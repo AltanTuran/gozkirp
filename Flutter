@@ -1,0 +1,99 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_blue/flutter_blue.dart';
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: BluetoothApp(),
+    );
+  }
+}
+
+class BluetoothApp extends StatefulWidget {
+  @override
+  _BluetoothAppState createState() => _BluetoothAppState();
+}
+
+class _BluetoothAppState extends State<BluetoothApp> {
+  FlutterBlue flutterBlue = FlutterBlue.instance;
+  List<BluetoothDevice> devicesList = [];
+  BluetoothDevice selectedDevice;
+  BluetoothCharacteristic characteristic;
+
+  @override
+  void initState() {
+    super.initState();
+    _startScanning();
+  }
+
+  void _startScanning() {
+    flutterBlue.scanResults.listen((List<ScanResult> results) {
+      for (ScanResult result in results) {
+        if (!devicesList.contains(result.device)) {
+          setState(() {
+            devicesList.add(result.device);
+          });
+        }
+      }
+    });
+
+    flutterBlue.startScan();
+  }
+
+  void _connectToDevice(BluetoothDevice device) async {
+    if (await device.connect()) {
+      setState(() {
+        selectedDevice = device;
+      });
+
+      discoverServices();
+    }
+  }
+
+  void discoverServices() async {
+    List<BluetoothService> services = await selectedDevice.discoverServices();
+    services.forEach((service) {
+      service.characteristics.forEach((characteristic) {
+        if (characteristic.properties.read) {
+          this.characteristic = characteristic;
+          characteristic.setNotifyValue(!characteristic.isNotifying);
+          characteristic.value.listen((value) {
+            // Gelen veriyi burada işleyebilirsiniz
+            print('Received: ${value.toString()}');
+          });
+        }
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Bluetooth Data Receiver'),
+      ),
+      body: Column(
+        children: <Widget>[
+          RaisedButton(
+            child: Text('Scan for devices'),
+            onPressed: () => _startScanning(),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: devicesList.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(devicesList[index].name),
+                  onTap: () => _connectToDevice(devicesList[index]),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

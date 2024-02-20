@@ -1,0 +1,43 @@
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(1, 0);
+
+int sensorValue = 0; // Variable to hold the sensor value
+int threshold = 100; // Threshold value
+
+// Variables for counting each state
+int count100 = 0;
+int count100_2 = 0;
+int count100_3 = 0;
+int count100_4 = 0;
+int count100_5 = 0;
+
+void setup() {
+  pinMode(3, INPUT);
+  pinMode(4, OUTPUT);
+  mySerial.begin(9600); // Initializing Bluetooth
+}
+
+void loop() {
+  sensorValue = analogRead(3); // Read sensor value
+
+  if (sensorValue > threshold) {
+    digitalWrite(4, LOW);
+    count100++;
+    if (count100 == 2) {
+      mySerial.println("I'm hungry"); // Send "I'm hungry" message to Bluetooth module
+    } else if (count100 == 3) {
+      mySerial.println("I'm thirsty"); // Send "I'm thirsty" message to Bluetooth module
+    } else if (count100 == 4) {
+      mySerial.println("I'm cold"); // Send "I'm cold" message to Bluetooth module
+    } else if (count100 == 5) {
+      mySerial.println("It's too hot"); // Send "It's too hot" message to Bluetooth module
+    }
+  }
+
+  if (sensorValue < threshold) {
+    digitalWrite(4, HIGH);
+    count100 = 0; // Reset counters when sensor value is less than 100
+  }
+
+  delay(10000); // Wait for 10 seconds
+}
